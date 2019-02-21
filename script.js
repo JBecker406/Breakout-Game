@@ -15,6 +15,7 @@ var leftPressed = false;
 // event handlers for control handlers
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
+document.addEventListener("mousemove", mouseMoveHandler, false);
 
 // functions to handle activating controls
 function keyDownHandler(e) {
@@ -31,8 +32,15 @@ function keyUpHandler(e) {
         leftPressed = false;
     }
 }
+function mouseMoveHandler(e) {
+    var relativeX = e.clientX - canvas.offsetLeft;
+    if (relativeX > 0 && relativeX < canvas.width) {
+        paddleX = relativeX - paddleWidth/2;
+    }
+}
 
-// detect collision between ball and any brick and change direction and remove brick
+// detect collision between ball and any brick and change direction, remove brick, and increment score
+// ends the game and starts new one if score is equal to number of bricks
 function collisionDetection() {
     for(var c=0; c<brickColumnCount; c++) {
         for(var r=0; r<brickRowCount; r++) {
@@ -41,10 +49,34 @@ function collisionDetection() {
                 if(x > b.x && x < b.x+brickWidth && y > b.y && y < b.y+brickHeight) {
                     dy = -dy;
                     b.status = 0;
+                    score++;
+                    if (score == brickRowCount*brickColumnCount) {
+                        alert("YOU WIN, CONGRATULATIONS!");
+                        document.location.reload();
+                    }
                 }
             }
         }
     }
+}
+
+// score tracking
+var score = 0;
+
+// draws the current score
+function drawScore() {
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#0095DD";
+    ctx.fillText("Score: " + score, 8, 20);
+}
+
+// player's lives
+var lives = 3
+
+function drawLives() {
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#0095DD";
+    ctx.fillText("Lives: " + lives, canvas.width-65, 20);
 }
 
 // ball variables
@@ -78,11 +110,11 @@ function drawPaddle() {
 }
 
 // variables for bricks
-var brickRowCount = 3;
-var brickColumnCount = 5;
+var brickRowCount = 6;
+var brickColumnCount = 10;
 var brickWidth = 75;
 var brickHeight = 20;
-var brickPadding = 10;
+var brickPadding = 17;
 var brickOffsetTop = 30;
 var brickOffsetLeft = 30;
 
@@ -120,6 +152,8 @@ function draw() {
     drawBricks();
     drawBall();
     drawPaddle();
+    drawScore();
+    drawLives();
     collisionDetection();
     
     // reverse x direction of ball if collides with left/right wall
@@ -127,16 +161,25 @@ function draw() {
         dx = -dx;
     }
 
-    // reverse y direction of ball if collides with top, bounce off of paddle, or end game if hits bottom
+    // reverse y direction of ball if collides with top, bounce off of paddle, or decrease lives if hits bottom
+    // ends the game if the lives reduce to 0
     if (y + dy < ballRadius) {
         dy = -dy;
     } else if (y + dy > canvas.height-ballRadius) {
         if (x > paddleX && x < paddleX + paddleWidth) {
             dy = -dy;
         } else {
-            alert("GAME OVER");
-            document.location.reload();
-            clearInterval(interval);
+            lives--;
+            if (!lives) {
+                alert("GAME OVER");
+                document.location.reload();
+            } else {
+                x = canvas.width/2;
+                y = canvas.height - 30;
+                dx = 2;
+                dy = -2;
+                paddleX = (canvas.width-paddleWidth)/2;
+            }
         }
     }
 
@@ -150,7 +193,9 @@ function draw() {
     // change x and y position of ball based on current velocity
     x += dx;
     y += dy;
+    // calls itself over and over, framerate is determined by browser
+    requestAnimationFrame(draw);
 }
 
-// interval to constantly run draw function
-var interval = setInterval(draw, 10);
+// initiates draw function
+draw();
